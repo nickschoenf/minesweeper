@@ -1,4 +1,3 @@
-use std::sync::Arc;
 use bevy::prelude::*;
 
 struct Board {
@@ -24,73 +23,70 @@ impl Board {
         let mut v: Vec<u32> = Vec::new();
         for _ in 0..m {
             let mut random_tile = rand::random::<u32>() % (self.height * self.width);
-            while random_tile != i && !v.contains(&random_tile) {
+            while random_tile == i || v.contains(&random_tile) {
                 random_tile = rand::random::<u32>() % (self.height * self.width);
             }
             v.push(random_tile);
         }
         for u in v {
             self.tiles[u as usize].is_mine = true;
-        }
 
-        // Initializing value of top left corner
-        self.tiles[0_usize].value = 0;
-        if self.tiles[1_usize].is_mine {
-            self.tiles[0_usize].value += 1;
-        }
-        if self.tiles[self.width as usize].is_mine {
-            self.tiles[0_usize].value += 1;
-        }
-        if self.tiles[self.width as usize + 1].is_mine {
-            self.tiles[0_usize].value += 1;
-        }
-
-        // Initializing value of top right corner
-        self.tiles[self.width as usize - 1].value = 0;
-        if self.tiles[self.width as usize - 2].is_mine {
-            self.tiles[self.width as usize - 1].value += 1;
-        }
-        if self.tiles[self.width as usize * 2 - 1].is_mine {
-            self.tiles[self.width as usize - 1].value += 1;
-        }
-        if self.tiles[self.width as usize * 2 - 2].is_mine {
-            self.tiles[self.width as usize - 1].value += 1;
-        }
-
-        // Initializing value of bottom left corner
-        self.tiles[self.width as usize * (self.height as usize - 1)].value = 0;
-        if self.tiles[self.width as usize * (self.height as usize - 2)].is_mine {
-            self.tiles[self.width as usize * (self.height as usize - 1)].value += 1;
-        }
-        if self.tiles[self.width as usize * (self.height as usize - 2) + 1].is_mine {
-            self.tiles[self.width as usize * (self.height as usize - 1)].value += 1;
-        }
-        if self.tiles[self.width as usize * (self.height as usize - 1) + 1].is_mine {
-            self.tiles[self.width as usize * (self.height as usize - 1)].value += 1;
-        }
-
-        // Initializing value of bottom right corner
-        self.tiles[self.width as usize * (self.height as usize) - 1].value = 0;
-        if self.tiles[self.width as usize * (self.height as usize - 2)].is_mine {
-            self.tiles[self.width as usize * (self.height as usize) - 1].value += 1;
-        }
-        if self.tiles[self.width as usize * (self.height as usize - 2) + 1].is_mine {
-            self.tiles[self.width as usize * (self.height as usize) - 1].value += 1;
-        }
-        if self.tiles[self.width as usize * (self.height as usize) - 2].is_mine {
-            self.tiles[self.width as usize * (self.height as usize) - 1].value += 1;
-        }
-
-        // Initializing values of top row
-        for index in 1..self.width - 1 {
-            if self.tiles[index as usize + 1].is_mine {
-                self.tiles[index as usize].value += 1;
+            if u >= self.width {
+                if u % self.width != 0 {
+                    self.tiles[u as usize - self.width as usize - 1].value += 1;
+                }
+                self.tiles[u as usize - self.width as usize].value += 1;
+                if (u + 1) % self.width != 0 {
+                    self.tiles[u as usize - self.width as usize + 1].value += 1;
+                }
             }
-            if self.tiles[self.width as usize * (self.height as usize) - 2].is_mine {
-                self.tiles[self.width as usize * (self.height as usize) - 1].value += 1;
+            
+            if u % self.width != 0 {
+                self.tiles[u as usize as usize - 1].value += 1;
+            }
+            if (u + 1) % self.width != 0 {
+                self.tiles[u as usize as usize + 1].value += 1;
+            }
+            
+            if u < self.width * (self.height - 1) {
+                if u % self.width != 0 {
+                    self.tiles[u as usize + self.width as usize - 1].value += 1;
+                }
+                self.tiles[u as usize + self.width as usize].value += 1;
+                if (u + 1) % self.width != 0 {
+                    self.tiles[u as usize + self.width as usize + 1].value += 1;
+                }
             }
         }
+    }
 
+    pub fn to_string(&self) -> String {
+        let mut output: String = String::new();
+        let mut index: u32 = 0;
+        for i in &self.tiles {
+            match i.is_mine {
+                true => output.push('M'),
+                false => match i.value {
+                    0 => output.push(' '),
+                    1 => output.push('1'),
+                    2 => output.push('2'),
+                    3 => output.push('3'),
+                    4 => output.push('4'),
+                    5 => output.push('5'),
+                    6 => output.push('6'),
+                    7 => output.push('7'),
+                    8 => output.push('8'),
+                    _ => output.push('?'),
+                }
+            }
+            if (index + 1) % self.width == 0 {
+                output.push('\n');
+            } else {
+                output.push(' ');
+            }
+            index += 1;
+        }
+        output
     }
 }
 
@@ -108,21 +104,24 @@ impl Tile {
             fail();
         }
     }
+
+    pub fn get_value(&self) -> TileValue {
+        match self.is_mine {
+            true => TileValue::Mine,
+            false => TileValue::Clear(self.value)
+        }
+    }
+}
+
+enum TileValue {
+    Mine,
+    Clear(u8),
 }
 
 fn main() {
     let mut board = Board::new(16, 30);
     board.initialize(0, 99);
-    for i in 0..16 {
-        print!("[");
-        for j in 0..30 {
-            if board.tiles.get(i * board.width + j).unwrap() {
-
-            }
-            print!("M");
-        }
-        print!("]\n");
-    }
+    println!("{}", board.to_string());
     App::new()
         .add_plugins(DefaultPlugins)
         .add_systems(Startup, setup)
