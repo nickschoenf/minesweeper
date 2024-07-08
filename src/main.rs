@@ -128,8 +128,27 @@ fn main() {
         .run();
 }
 
-fn setup(mut commands: Commands) {
+fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands.spawn(Camera2dBundle::default());
+    commands.spawn(NodeBundle {
+        style: Style {
+            width: Val::Percent(100.),
+            ..default()
+        },
+        ..default()
+    })
+    .with_children(|root| {
+        // Text where we display current resolution
+        root.spawn((
+            ImageBundle {
+                style: Style {
+                    ..default()
+                },
+                image: UiImage::new(asset_server.load("tile_covered.png")),
+                ..default()
+            },
+        ));
+    });
 }
 
 fn fail() {
